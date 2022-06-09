@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="/styles/styles.css">
+    <title>Memory Card Game</title>
+</head>
+<body>
+    <div class="game-container">
+        <div class="main-flex-column">
+            <h1>Color your memory!</h1>
+            <button id="game-button">Start Game</button>
+            <div id="game-flex"></div>
+            <h3>color picker</h3>
+            <div class="color_picker">
+            </div>
+            <footer>
+                &copy; 2016, <a href="https://codepen.io/OBS/">OBS</a>
+            </footer>
+        </div>
+    </div>
+    <!--    GSAP    -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.18.2/TweenLite.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.18.2/plugins/CSSPlugin.min.js"></script>
+    
+    <script src="scripts/main.js"></script>
+</body>
+<script>
+   // TODO:
+// rename vars to camelCase
+
+// self executing JS function wrapping the entire code
+(function () {
+    "use strict";
+    
+    var firstTime = true, CARDS_NUM = 3;
+    var colors = [
+                    '#0303b7',
+                    '#b7039b',
+                    '#07f219',
+                    '#ff6c00',
+                    '#ff0000',
+                    '#ffff07',
+                    '#ff00e2',
+                    '#00e2ff',
+                    '#000000'  ];
+    
+    var countGuessed = 0;
+
+    initColorPicker();
+    
+    var startButton = document.getElementById('game-button');
+    
+    startButton.addEventListener('click',initGame);
+    
+    function initGame() {
+        if(firstTime) {
+            createCards();
+            firstTime = false;
+        } else {
+            animateColorPicker();
+            colorCards();
+        }
+    }
+
+    function initColorPicker() {
+        var container = document.querySelector('.color_picker');
+        
+        for(var i=0;i<colors.length;i++) {      
+            // create color boxes
+            var div = document.createElement('div');
+            div.className = 'color_box';
+            
+            // color picker boxes
+            div.style.backgroundColor = colors[i];
+            div.myColor = colors[i];
+            div.style.cursor = 'pointer';
+            
+            // on click
+            div.addEventListener('click',function(event) {
+                // compare myColor value with selected game box
+                var gaemBoxArray = document.querySelectorAll('.game_color_box');
+                for(var i=0;i<gaemBoxArray.length;i++) {
+                    if (gaemBoxArray[i].pickedFlag == true) {
+                        var selectedGameBox = gaemBoxArray[i];
+                        var selectedGbIdx = i;
+                    }
+                }
+                if (this.myColor == selectedGameBox.myColor) {
+                    
+                    TweenLite.to(selectedGameBox, 0.1, {scaleX: 0});
+                    TweenLite.set(selectedGameBox, {background: this.myColor});
+                    TweenLite.to(selectedGameBox, 0.2, 
+                                 {scaleX: 1, delay:0.1, onComplete: 
+                                    function() {
+                                        selectedGameBox.guessedFlag = true;
+                                        countGuessed++;
+
+                                        if (countGuessed==gaemBoxArray.length) {
+                                            notifyWinner();
+                                        }
+                                        else {
+                                            markNextCard(gaemBoxArray, selectedGbIdx);
+                                        }    
+                    }});
+                }
+            });
+            
+            container.appendChild(div);
+            
+        }
+    };
+    function createCards() {
+        document.getElementById('game-button').innerHTML = 'ReStart Game';
+        var gameCardsContainer = document.getElementById('game-flex');
+        for(var i=0; i< CARDS_NUM;i++) {
+            var gameColorBox = document.createElement('game_color_box');
+            
+            gameColorBox.className = 'game_color_box';
+            gameColorBox.style.cursor = 'pointer';
+            
+            gameColorBox.addEventListener('click',selectCard);
+            
+            gameCardsContainer.appendChild(gameColorBox);
+        }
+        colorCards();
+        
+    }
+    
+    function colorCards() {
+        // clear data and color cards
+        countGuessed = 0;
+        
+        var col = document.querySelectorAll('.game_color_box');
+        var arr = [].slice.call(col);
+        
+        for(var i=0; i<arr.length;i++) {
+            //color
+            var randomColor = colors[Math.floor(Math.random()*colors.length)];
+            
+            arr[i].style.background = '';
+            TweenLite.to(arr[i], 0.5, {backgroundColor: randomColor});
+            
+            arr[i].myColor = randomColor;
+            
+           
+
+            setTimeout(hideColors, 2000, arr[i]);
+            
+            //clear data
+            arr[i].innerHTML = '';
+            arr[i].guessedFlag = false;
+            
+        }
+    }
+    function selectCard() {
+        var col = document.querySelectorAll('.game_color_box');
+        var arr = [].slice.call(col);
+        if (this.pickedFlag == true || this.guessedFlag==true)
+            return;
+        for(var i=0;i<arr.length;i++) {
+            if (arr[i].pickedFlag == true) {
+                TweenLite.to(arr[i], 0.1, {boxShadow: "none"});
+                arr[i].pickedFlag = false;
+            }
+        }
+        TweenLite.to(this, 0.1, {boxShadow: "0 0 0 3px black inset"});
+        this.pickedFlag = true;
+    }
+    
+    function markNextCard(gaemBoxArray, selectedGbIdx) {
+        //assumes not all cards were guessed correctly
+        var nextIdx=selectedGbIdx;
+        do {
+            nextIdx = (nextIdx+1)%gaemBoxArray.length;
+        } while (gaemBoxArray[nextIdx].guessedFlag==true);
+        
+        for(var i=0;i<gaemBoxArray.length;i++) {
+            if (gaemBoxArray[i].pickedFlag == true) {
+                TweenLite.to(gaemBoxArray[i], 0.1, {boxShadow: "none"});
+                gaemBoxArray[i].pickedFlag = false;
+            }
+        }
+        TweenLite.to(gaemBoxArray[nextIdx], 0.1, {boxShadow: "0 0 0 3px black inset"});
+        gaemBoxArray[nextIdx].pickedFlag = true;
+    }
+    function notifyWinner() {
+        var cp = document.getElementsByTagName('h3');
+        TweenLite.to(cp, 0.2, {autoAlpha:0, y:-50});
+        TweenLite.set(cp, {innerHTML:"Amazing!", delay:0.2});
+        TweenLite.to(cp, 0.2, {autoAlpha:1, scale:1.25, y:0, delay:0.2});
+    }
+    function animateColorPicker() {
+        var cp = document.getElementsByTagName('h3');
+        if (cp.innerHTML != "color picker") {
+            TweenLite.set(cp, {innerHTML:"color picker"});
+            TweenLite.fromTo(cp, 0.3, {autoAlpha:0, scale:1, x:-150},
+                            {autoAlpha:1, scale:1, x:0, innerHTML:"color picker"});
+        }
+    }
+    
+    function hideColors(element) {
+//        element.style.backgroundColor = 'green';
+        TweenLite.to(element, 0.1, {scaleX: 0});
+        TweenLite.set(element, {background: "#c0c0c0 url('http://www.clker.com/cliparts/M/n/l/L/f/g/neat-socks-md.png') no-repeat center center", delay:0.1});
+        TweenLite.set(element, {backgroundSize:"80% 80%", delay:0.1});
+        TweenLite.to(element, 0.2, {scaleX: 1, delay: 0.1});
+        
+    }
+
+})(); 
+</script>
+<style>
+ @import url(reset.css);
+
+@import url(https://fonts.googleapis.com/css?family=Pacifico);
+@import url(https://fonts.googleapis.com/css?family=Josefin+Slab);
+
+html {
+    font-size: 62.5%;
+    
+}
+body {
+    font-size: 1.6rem;
+    font-family: 'Pacifico', cursive;
+    height: 100vh;    
+}
+
+.game-container {
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    align-items: center;
+/*    border: 3px dashed cyan;*/
+/*    height: calc(100vh - 20px);*/
+    height: 100vh;
+/*    margin: 10px;*/
+/*    margin: 10px auto;*/
+    width: calc(100vw-20px);
+/*    max-width: 800px;*/
+}
+
+.main-flex-column {
+    display: flex;
+    flex-flow: column nowrap;
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border: 3px dashed cyan;
+}
+
+.color_box {
+/*    border: red solid 1px;*/
+    flex: 1 0 auto;
+    height: 20px;
+}
+
+button {
+    font-size: 1.6rem;
+    font-family: 'Josefin Slab', serif;
+}
+
+.redbox {
+    border: 3px solid red;
+}
+
+@media all and (max-width: 400px) {
+    html {
+        font-size: 50%;
+    }
+}
+.color_picker {
+    display: flex;
+    flex-flow: row nowrap;
+}
+
+#game-flex {
+    display: flex;
+/*    flex-flow: row nowrap;*/   
+}
+
+.game_color_box {
+    height: 5rem;
+    box-sizing: border-box;
+    border: 1px solid gray;
+    flex: 1 0 auto;
+}
+footer {
+    position: relative;
+    bottom: -2.6rem;
+    font-family: 'Josefin Slab', serif;
+    font-size: 1.2rem;
+}   
+</style>
+</html>
